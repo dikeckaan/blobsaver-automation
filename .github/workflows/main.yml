@@ -1,0 +1,70 @@
+name: BlobSaver Backup (Multi-Device XML Parse)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  backup-blobs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Gerekli bağımlılıkları yükle
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxml2-utils
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: BlobSaver indir ve çıkar
+        run: |
+          curl -L -o blobsaver.tgz https://github.com/airsquared/blobsaver/releases/download/v3.6.0/blobsaver-3.6.0.tgz
+          mkdir extract
+          tar -xzf blobsaver.tgz -C extract
+          chmod +x extract/blobsaver/bin/blobsaver
+
+      - name: blobsaver.xml oluştur
+        run: echo '${{ secrets.BLOBSAVER }}' > blobsaver.xml
+
+      - name: XML'den cihazları işle ve blobları al
+        run: |
+          mkdir -p ./shsh
+
+          device_names=$(xmllint --xpath "//node[@name='Saved Devices']/node/@name" blobsaver.xml | sed -E 's/name="([^"]*)"/\1\n/g' | grep -v '^$')
+
+          index=1
+          for name in $device_names; do
+            echo "::group::📲 Cihaz $index"
+
+            ecid=$(xmllint --xpath "string(//node[@name='$name']/map/entry[@key='ECID']/@value)" blobsaver.xml)
+            identifier=$(xmllint --xpath "string(//node[@name='$name']/map/entry[@key='Device Identifier']/@value)" blobsaver.xml)
+            apnonce=$(xmllint --xpath "string(//node[@name='$name']/map/entry[@key='Apnonce']/@value)" blobsaver.xml)
+            generator=$(xmllint --xpath "string(//node[@name='$name']/map/entry[@key='Generator']/@value)" blobsaver.xml)
+            betas=$(xmllint --xpath "string(//node[@name='$name']/map/entry[@key='Include Betas']/@value)" blobsaver.xml)
+
+            cmd="extract/blobsaver/bin/blobsaver --save-blobs \
+              --identifier='$identifier' \
+              --ecid='$ecid' \
+              --apnonce='$apnonce' \
+              --generator='$generator' \
+              --save-path=./shsh"
+
+            if [[ "$betas" == "true" ]]; then
+              cmd="$cmd --include-betas"
+            fi
+
+            eval "$cmd"
+
+            echo "✅ Cihaz $index SHSH yedeği tamamlandı."
+            echo "::endgroup::"
+            index=$((index + 1))
+          done
+
+      - name: SHSH dosyalarını listele
+        run: find ./shsh -type f -name "*.shsh2"
+
+      - name: Artifacts olarak yükle
+        uses: actions/upload-artifact@v4
+        with:
+          name: shsh-backup
+          path: ./shsh
