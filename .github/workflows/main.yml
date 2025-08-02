@@ -62,8 +62,9 @@ jobs:
           TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
           TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
         run: |
-          find ./shsh -type f -name "*.shsh2" | while read file; do
+          find ./shsh -type f -name "*.shsh2" | while read -r file; do
             curl -s -X POST "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendDocument" \
               -F chat_id="${TG_CHAT_ID}" \
-              -F document=@"$file" > /dev/null
+              -F document=@"\"$file\"" \
+              || echo "⚠️ Gönderilemedi: $file"
           done
