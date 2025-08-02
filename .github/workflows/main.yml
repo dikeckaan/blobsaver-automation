@@ -1,7 +1,8 @@
 name: BlobSaver Backup (Multi-Device XML Parse)
 
 on:
-  workflow_dispatch:
+  schedule:
+    - cron: '0 9 * * *' # Türkiye saatiyle 12:00 için UTC 09:00
 
 jobs:
   backup-blobs:
@@ -11,7 +12,7 @@ jobs:
       - name: Gerekli bağımlılıkları yükle
         run: |
           sudo apt-get update
-          sudo apt-get install -y libxml2-utils
+          sudo apt-get install -y libxml2-utils curl jq
 
       - name: Checkout
         uses: actions/checkout@v4
@@ -34,8 +35,6 @@ jobs:
 
           index=1
           for name in $device_names; do
-            echo "::group::📲 Cihaz $index"
-
             ecid=$(xmllint --xpath "string(//node[@name='$name']/map/entry[@key='ECID']/@value)" blobsaver.xml)
             identifier=$(xmllint --xpath "string(//node[@name='$name']/map/entry[@key='Device Identifier']/@value)" blobsaver.xml)
             apnonce=$(xmllint --xpath "string(//node[@name='$name']/map/entry[@key='Apnonce']/@value)" blobsaver.xml)
@@ -54,17 +53,16 @@ jobs:
             fi
 
             eval "$cmd"
-
-            echo "✅ Cihaz $index SHSH yedeği tamamlandı."
-            echo "::endgroup::"
             index=$((index + 1))
           done
 
-      - name: SHSH dosyalarını listele
-        run: find ./shsh -type f -name "*.shsh2"
-
-      - name: Artifacts olarak yükle
-        uses: actions/upload-artifact@v4
-        with:
-          name: shsh-backup
-          path: ./shsh
+      - name: SHSH dosyalarını Telegram'a gönder
+        env:
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+        run: |
+          find ./shsh -type f -name "*.shsh2" | while read file; do
+            curl -s -X POST "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendDocument" \
+              -F chat_id="${TG_CHAT_ID}" \
+              -F document=@"$file" > /dev/null
+          done
