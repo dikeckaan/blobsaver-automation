@@ -41,12 +41,16 @@ jobs:
             generator=$(xmllint --xpath "string(//node[@name='$name']/map/entry[@key='Generator']/@value)" blobsaver.xml)
             betas=$(xmllint --xpath "string(//node[@name='$name']/map/entry[@key='Include Betas']/@value)" blobsaver.xml)
 
-            cmd="extract/blobsaver/bin/blobsaver --save-blobs \
-              --identifier=\"$identifier\" \
-              --ecid=\"$ecid\" \
-              --apnonce=\"$apnonce\" \
-              --generator=\"$generator\" \
-              --save-path=./shsh"
+            cmd=(extract/blobsaver/bin/blobsaver --save-blobs \
+              --identifier="$identifier" \
+              --ecid="$ecid" \
+              --apnonce="$apnonce" \
+              --generator="$generator" \
+              --save-path=./shsh)
+            if [[ "$betas" == "true" ]]; then
+              cmd+=("--include-betas")
+            fi
+            "${cmd[@]}" >/dev/null 2>&1
 
             if [[ "$betas" == "true" ]]; then
               cmd="$cmd --include-betas"
