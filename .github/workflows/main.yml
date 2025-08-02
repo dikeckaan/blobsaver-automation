@@ -42,10 +42,10 @@ jobs:
             betas=$(xmllint --xpath "string(//node[@name='$name']/map/entry[@key='Include Betas']/@value)" blobsaver.xml)
 
             cmd="extract/blobsaver/bin/blobsaver --save-blobs \
-              --identifier='$identifier' \
-              --ecid='$ecid' \
-              --apnonce='$apnonce' \
-              --generator='$generator' \
+              --identifier=\"$identifier\" \
+              --ecid=\"$ecid\" \
+              --apnonce=\"$apnonce\" \
+              --generator=\"$generator\" \
               --save-path=./shsh"
 
             if [[ "$betas" == "true" ]]; then
