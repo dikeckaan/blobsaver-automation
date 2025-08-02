@@ -34,7 +34,6 @@ jobs:
 
           device_names=$(xmllint --xpath "//node[@name='Saved Devices']/node/@name" blobsaver.xml | sed -E 's/name="([^"]*)"/\1\n/g' | grep -v '^$')
 
-          index=1
           for name in $device_names; do
             ecid=$(xmllint --xpath "string(//node[@name='$name']/map/entry[@key='ECID']/@value)" blobsaver.xml)
             identifier=$(xmllint --xpath "string(//node[@name='$name']/map/entry[@key='Device Identifier']/@value)" blobsaver.xml)
@@ -53,8 +52,7 @@ jobs:
               cmd="$cmd --include-betas"
             fi
 
-            eval "$cmd"
-            index=$((index + 1))
+            eval "$cmd" >/dev/null 2>&1
           done
 
       - name: SHSH dosyalarını Telegram'a gönder
@@ -62,9 +60,20 @@ jobs:
           TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
           TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
         run: |
+          error_occurred=false
+
           find ./shsh -type f -name "*.shsh2" | while read -r file; do
             curl -s -X POST "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendDocument" \
               -F chat_id="${TG_CHAT_ID}" \
-              -F document=@"\"$file\"" \
-              || echo "⚠️ Gönderilemedi: $file"
+              -F document=@"$file" >/dev/null || {
+                curl -s -X POST "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage" \
+                  -F chat_id="${TG_CHAT_ID}" \
+                  -F text="⚠️ Dosya gönderilemedi: $file" >/dev/null || error_occurred=true
+              }
           done
+
+          if $error_occurred; then
+            curl -s -X POST "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage" \
+              -F chat_id="${TG_CHAT_ID}" \
+              -F text="⚠️ Hata oluştu ve hata mesajı Telegram'a bile iletilemedi." >/dev/null
+          fi
