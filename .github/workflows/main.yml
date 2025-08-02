@@ -55,25 +55,25 @@ jobs:
             eval "$cmd" >/dev/null 2>&1
           done
 
-      - name: SHSH dosyalarını Telegram'a gönder
-        env:
-          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
-          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
-        run: |
-          error_occurred=false
-
-          find ./shsh -type f -name "*.shsh2" | while read -r file; do
-            curl -s -X POST "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendDocument" \
-              -F chat_id="${TG_CHAT_ID}" \
-              -F document=@"$file" >/dev/null || {
-                curl -s -X POST "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage" \
-                  -F chat_id="${TG_CHAT_ID}" \
-                  -F text="⚠️ Dosya gönderilemedi: $file" >/dev/null || error_occurred=true
-              }
-          done
-
-          if $error_occurred; then
-            curl -s -X POST "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage" \
-              -F chat_id="${TG_CHAT_ID}" \
-              -F text="⚠️ Hata oluştu ve hata mesajı Telegram'a bile iletilemedi." >/dev/null
-          fi
+            - name: SHSH dosyalarını Telegram'a gönder
+              env:
+                TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+                TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+              run: |
+                error_occurred=false
+            
+                find ./shsh -type f -name "*.shsh2" | while read -r file; do
+                  curl -s -X POST "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendDocument" \
+                    -F chat_id="${TG_CHAT_ID}" \
+                    -F document=@"$file" >/dev/null || {
+                      curl -s -X POST "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage" \
+                        -F chat_id="${TG_CHAT_ID}" \
+                        -F text="⚠️ Dosya gönderilemedi: $file" >/dev/null || error_occurred=true
+                    }
+                done
+            
+                if $error_occurred; then
+                  curl -s -X POST "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage" \
+                    -F chat_id="${TG_CHAT_ID}" \
+                    -F text="⚠️ Hata oluştu ve hata mesajı Telegram'a bile iletilemedi." >/dev/null
+                fi
