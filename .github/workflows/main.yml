@@ -1,8 +1,6 @@
 name: BlobSaver Backup (Multi-Device XML Parse)
 
 on:
-  schedule:
-    - cron: '0 9 * * *' # Türkiye saatiyle 12:00 için UTC 09:00
   workflow_dispatch:
 
 jobs:
